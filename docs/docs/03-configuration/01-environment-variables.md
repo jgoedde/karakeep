@@ -163,14 +163,16 @@ Either `OPENAI_API_KEY` or `OLLAMA_BASE_URL` need to be set for automatic taggin
 | CRAWLER_YTDLP_ARGS                       | No       | []        | Include additional yt-dlp arguments to be passed at crawl time separated by %%: https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#general-options                                                                                                                                                                                                                           |
 | CRAWLER_MONOLITH_TIMEOUT_SEC             | No       | 5         | How long to let monolith run when archiving the full page before timing out (in seconds). Increase this if bookmarks from slow servers frequently fail to archive. Monolith's own default is 120 seconds.                                                                                                                                                                     |
 | CRAWLER_MONOLITH_ARGS                    | No       | []        | Include additional monolith arguments to be passed when archiving a full page, separated by `%%`. For example, `--no-fonts%%--no-audio%%--no-video` to exclude web fonts, audio, and video from archives. Do not re-specify `-t`, `-b`, or `-o` as these are managed internally. See [monolith options](https://github.com/Y2Z/monolith#command-line-options).                |
-| BROWSER_COOKIE_PATH                      | No       | Not set   | Path to a JSON file containing cookies to be loaded into the browser context. The file should be an array of cookie objects, each with name and value (required), and optional fields like domain, path, expires, httpOnly, secure, and sameSite (e.g., `[{"name": "session", "value": "xxx", "domain": ".example.com"}`]).                                                   |
+| BROWSER_COOKIE_PATH                      | No       | Not set   | Path to a cookie file to be loaded into the browser context. Either a JSON array of cookie objects (e.g., `[{"name": "session", "value": "xxx", "domain": ".example.com"}]`) or a Netscape `cookies.txt` file (as exported by yt-dlp, curl or wget). The format is detected automatically from the file's content. See below for details. |
 | HTML_CONTENT_SIZE_INLINE_THRESHOLD_BYTES | No       | 5 \* 1024 | The thresholds in bytes after which larger assets will be stored in the assetdb (folder/s3) instead of inline in the database.                                                                                                                                                                                                                                                |
 
 <details>
 
   <summary>More info on BROWSER_COOKIE_PATH</summary>
 
-BROWSER_COOKIE_PATH specifies the path to a JSON file containing cookies to be loaded into the browser context for crawling.
+BROWSER_COOKIE_PATH specifies the path to a file containing cookies to be loaded into the browser context for crawling. Two formats are supported, and the format is detected automatically from the file's content (the file name and extension don't matter): if the first non-whitespace character is `[`, the file is read as JSON, otherwise as Netscape `cookies.txt`.
+
+**JSON format**
 
 The JSON file must be an array of cookie objects, each with:
 
@@ -193,6 +195,24 @@ Example JSON file:
     "sameSite": "Lax"
   }
 ]
+```
+
+**Netscape `cookies.txt` format**
+
+This is the format used by yt-dlp, curl and wget. Each cookie is one line with 7 tab-separated fields: domain, include subdomains (`TRUE`/`FALSE`), path, secure (`TRUE`/`FALSE`), expiry (unix timestamp, `0` for a session cookie), name and value. Lines starting with `#` are comments, except lines starting with `#HttpOnly_`, which mark HttpOnly cookies.
+
+Example `cookies.txt` (fields separated by tabs):
+
+```text
+# Netscape HTTP Cookie File
+.example.com	TRUE	/	TRUE	1735689600	session	xxx
+#HttpOnly_forum.example.org	FALSE	/	TRUE	0	sid	yyy
+```
+
+To produce a `cookies.txt` fully offline from a local browser profile, you can use [yt-dlp](https://github.com/yt-dlp/yt-dlp):
+
+```bash
+yt-dlp --cookies-from-browser firefox --cookies cookies.txt
 ```
 
 </details>

@@ -25,6 +25,8 @@ import { z } from "zod";
 
 import serverConfig from "@karakeep/shared/config";
 import logger from "@karakeep/shared/logger";
+import type { Cookie } from "@karakeep/shared/utils/cookieFile";
+import { parseCookieFile } from "@karakeep/shared/utils/cookieFile";
 import { setUrlHostnameFromResolvedAddress } from "@karakeep/shared/utils/url";
 import { tryCatch } from "@karakeep/shared/tryCatch";
 
@@ -33,30 +35,6 @@ import {
   normalizeBrowserUserAgent,
   redactUrlCredentials,
 } from "./crawlerUtils";
-
-interface Cookie {
-  name: string;
-  value: string;
-  domain?: string;
-  path?: string;
-  expires?: number;
-  httpOnly?: boolean;
-  secure?: boolean;
-  sameSite?: "Strict" | "Lax" | "None";
-}
-
-const cookieSchema = z.object({
-  name: z.string(),
-  value: z.string(),
-  domain: z.string().optional(),
-  path: z.string().optional(),
-  expires: z.number().optional(),
-  httpOnly: z.boolean().optional(),
-  secure: z.boolean().optional(),
-  sameSite: z.enum(["Strict", "Lax", "None"]).optional(),
-});
-
-const cookiesSchema = z.array(cookieSchema);
 
 let globalBrowser: Browser | undefined;
 let globalBlocker: PlaywrightBlocker | undefined;
@@ -308,8 +286,8 @@ async function loadCookiesFromFile(): Promise<void> {
       return;
     }
     const data = await fs.readFile(path, "utf8");
-    const cookies = JSON.parse(data);
-    globalCookies = cookiesSchema.parse(cookies);
+    globalCookies = parseCookieFile(data);
+    logger.info(`[Crawler] Parsed ${globalCookies.length} cookie(s)`);
   } catch (error) {
     logger.error("Failed to read or parse cookies file:", error);
     if (error instanceof z.ZodError) {
